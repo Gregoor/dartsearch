@@ -7,6 +7,7 @@ import 'dart:html';
 Level level;
 
 LevelRenderer levelRenderer;
+PathRenderer pathRenderer;
 List<Renderer> renderers = [];
 
 main() {
@@ -14,11 +15,13 @@ main() {
 	HtmlElement	container = document.querySelector('#searchContainer'),
 							canvasContainer = container.querySelector('.canvasContainer');
 	
-	removePathRenderer() {
-		renderers.removeWhere((renderer) => renderer is PathRenderer && renderer.remove());	
+	removeRenderer(renderer) {
+		renderers.removeWhere((r2) => renderer == r2 && renderer.remove());	
 	}
 	initLevelRenderer() {
-		removePathRenderer();
+		removeRenderer(levelRenderer);
+		removeRenderer(pathRenderer);
+		
 		levelRenderer = new LevelRenderer(canvasContainer, level); 
 		renderers.addAll([levelRenderer]);
 		resize();
@@ -47,12 +50,12 @@ main() {
 					break;
 			}
 			
-			removePathRenderer();
+			removeRenderer(pathRenderer);
 			renderers.add(
-				new PathRenderer(canvasContainer, levelRenderer, search.path)..render()
+				(pathRenderer = new PathRenderer(canvasContainer, levelRenderer, search.path)..render())
 			);
 		},
-		onClearSearch: removePathRenderer
+		onClearSearch: () => removeRenderer(pathRenderer)
 	);
 }
 

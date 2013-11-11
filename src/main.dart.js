@@ -5486,16 +5486,6 @@ IterableBase: {"": "Object;",
     for (t1 = this.get$iterator(this); t1.moveNext$0();)
       f.call$1(t1.get$current());
   },
-  reduce$1: function(_, combine) {
-    var iterator, value;
-    iterator = this.get$iterator(this);
-    if (!iterator.moveNext$0())
-      throw H.wrapException(new P.StateError("No elements"));
-    value = iterator.get$current();
-    for (; iterator.moveNext$0();)
-      value = combine.call$2(value, iterator.get$current());
-    return value;
-  },
   join$1: function(_, separator) {
     var iterator, buffer, t1;
     iterator = this.get$iterator(this);
@@ -5677,6 +5667,20 @@ ListQueue: {"": "IterableBase;_table,_head,_tail,_modificationCount",
       for (t1 = t1.get$iterator(elements); t1.moveNext$0();)
         this._add$1(t1.get$current());
   },
+  remove$1: function(_, object) {
+    var i, t1;
+    for (i = this._head; i !== this._tail; i = (i + 1 & this._table.length - 1) >>> 0) {
+      t1 = this._table;
+      if (i < 0 || i >= t1.length)
+        throw H.ioore(t1, i);
+      if (J.$eq(t1[i], object)) {
+        this._remove$1(i);
+        this._modificationCount = this._modificationCount + 1;
+        return true;
+      }
+    }
+    return false;
+  },
   toString$0: function(_) {
     return H.IterableMixinWorkaround_toStringIterable(this, "{", "}");
   },
@@ -5718,6 +5722,45 @@ ListQueue: {"": "IterableBase;_table,_head,_tail,_modificationCount",
     if (this._head === this._tail)
       this._grow$0();
     this._modificationCount = this._modificationCount + 1;
+  },
+  _remove$1: function(offset) {
+    var t1, t2, mask, t3, t4, i, prevOffset, nextOffset;
+    t1 = this._table;
+    t2 = t1.length;
+    mask = t2 - 1;
+    t3 = this._head;
+    t4 = this._tail;
+    if ((offset - t3 & mask) >>> 0 < (t4 - offset & mask) >>> 0) {
+      for (i = offset; i !== t3; i = prevOffset) {
+        prevOffset = (i - 1 & mask) >>> 0;
+        if (prevOffset < 0 || prevOffset >= t2)
+          throw H.ioore(t1, prevOffset);
+        t4 = t1[prevOffset];
+        if (i < 0 || i >= t2)
+          throw H.ioore(t1, i);
+        t1[i] = t4;
+      }
+      if (t3 < 0 || t3 >= t2)
+        throw H.ioore(t1, t3);
+      t1[t3] = null;
+      this._head = (t3 + 1 & mask) >>> 0;
+      return (offset + 1 & mask) >>> 0;
+    } else {
+      this._tail = (t4 - 1 & mask) >>> 0;
+      for (t1 = this._tail, t2 = this._table, t3 = t2.length, i = offset; i !== t1; i = nextOffset) {
+        nextOffset = (i + 1 & mask) >>> 0;
+        if (nextOffset < 0 || nextOffset >= t3)
+          throw H.ioore(t2, nextOffset);
+        t4 = t2[nextOffset];
+        if (i < 0 || i >= t3)
+          throw H.ioore(t2, i);
+        t2[i] = t4;
+      }
+      if (t1 < 0 || t1 >= t3)
+        throw H.ioore(t2, t1);
+      t2[t1] = null;
+      return offset;
+    }
   },
   _grow$0: function() {
     var newTable, t1, t2, split;
@@ -5973,10 +6016,10 @@ Duration: {"": "Object;_duration<",
     return P.Duration$(0, 0, C.JSNumber_methods.toInt$0(C.JSNumber_methods.roundToDouble$0(this._duration * factor)), 0, 0, 0);
   },
   $lt: function(_, other) {
-    return this._duration < other.get$_duration();
+    return C.JSNumber_methods.$lt(this._duration, other.get$_duration());
   },
   $gt: function(_, other) {
-    return C.JSNumber_methods.$gt(this._duration, other.get$_duration());
+    return this._duration > other.get$_duration();
   },
   $ge: function(_, other) {
     return C.JSNumber_methods.$ge(this._duration, other.get$_duration());
@@ -7421,9 +7464,9 @@ main: function() {
   t2._tryResume$0();
   container = document.querySelector("#searchContainer");
   canvasContainer = container.querySelector(".canvasContainer");
-  t2 = new F.main_removePathRenderer();
+  t2 = new F.main_removeRenderer();
   t1 = new F.main_initLevelRenderer(canvasContainer, t2);
-  D.attachMenuListeners(container, t2, new F.main_closure0(t1), new F.main_closure1(t1), new F.main_closure2(canvasContainer, t2));
+  D.attachMenuListeners(container, new F.main_closure0(t2), new F.main_closure1(t1), new F.main_closure2(t1), new F.main_closure3(canvasContainer, t2));
 },
 
 resize: function() {
@@ -7442,74 +7485,86 @@ main_closure: {"": "Closure;",
   $is_args1: true
 },
 
-main_removePathRenderer: {"": "Closure;",
-  call$0: function() {
-    H.IterableMixinWorkaround_removeWhereList($.get$renderers(), new F.main_removePathRenderer_closure());
-  }
-},
-
-main_removePathRenderer_closure: {"": "Closure;",
+main_removeRenderer: {"": "Closure;",
   call$1: function(renderer) {
-    var t1 = J.getInterceptor$ax(renderer);
-    return typeof renderer === "object" && renderer !== null && !!t1.$isPathRenderer && t1.remove$0(renderer);
+    H.IterableMixinWorkaround_removeWhereList($.get$renderers(), new F.main_removeRenderer_closure(renderer));
   },
   $is_args1: true
 },
 
-main_initLevelRenderer: {"": "Closure;canvasContainer_0,removePathRenderer_1",
+main_removeRenderer_closure: {"": "Closure;renderer_0",
+  call$1: function(r2) {
+    var t1, t2;
+    t1 = this.renderer_0;
+    t2 = J.getInterceptor(t1);
+    return t2.$eq(t1, r2) && t2.remove$0(t1) === true;
+  },
+  $is_args1: true
+},
+
+main_initLevelRenderer: {"": "Closure;canvasContainer_1,removeRenderer_2",
   call$0: function() {
-    this.removePathRenderer_1.call$0();
-    $.levelRenderer = Y.LevelRenderer$(this.canvasContainer_0, $.level);
+    var t1 = this.removeRenderer_2;
+    t1.call$1($.levelRenderer);
+    t1.call$1($.pathRenderer);
+    $.levelRenderer = Y.LevelRenderer$(this.canvasContainer_1, $.level);
     C.JSArray_methods.addAll$1($.get$renderers(), [$.levelRenderer]);
     F.resize();
   }
 },
 
-main_closure1: {"": "Closure;initLevelRenderer_2",
+main_closure2: {"": "Closure;initLevelRenderer_3",
   call$2: function(width, height) {
     $.level = G.Level$random(width, height);
-    this.initLevelRenderer_2.call$0();
+    this.initLevelRenderer_3.call$0();
   },
   $is_args2: true
 },
 
-main_closure0: {"": "Closure;initLevelRenderer_3",
+main_closure1: {"": "Closure;initLevelRenderer_4",
   call$1: function(levelString) {
     $.level = G.Level$fromAsciiString(levelString);
-    this.initLevelRenderer_3.call$0();
+    this.initLevelRenderer_4.call$0();
   },
   $is_args1: true
 },
 
-main_closure2: {"": "Closure;canvasContainer_4,removePathRenderer_5",
+main_closure3: {"": "Closure;canvasContainer_5,removeRenderer_6",
   call$1: function(searchId) {
     var t1, search, t2;
     switch (searchId) {
       case "bfs":
         t1 = $.level;
-        search = new B.BreadthFirst(false, false, t1, null, []);
+        search = new B.BreadthFirst(t1, null, []);
         search.Search$1(t1);
         break;
       case "dfs":
         t1 = $.level;
-        search = new B.DepthFirst(false, false, t1, null, []);
+        search = new B.DepthFirst(t1, null, []);
         search.Search$1(t1);
         break;
       case "astar":
         t1 = $.level;
-        search = new B.AStar(H.fillLiteralMap([], P.LinkedHashMap_LinkedHashMap(null, null, null, null, null)), false, false, t1, null, []);
+        search = new B.AStar(H.fillLiteralMap([], P.LinkedHashMap_LinkedHashMap(null, null, null, null, null)), t1, null, []);
         search.Search$1(t1);
         break;
       default:
         search = null;
     }
-    this.removePathRenderer_5.call$0();
+    this.removeRenderer_6.call$1($.pathRenderer);
     t1 = $.get$renderers();
-    t2 = Y.PathRenderer$(this.canvasContainer_4, $.levelRenderer, search.path);
+    t2 = Y.PathRenderer$(this.canvasContainer_5, $.levelRenderer, search.path);
     t2.render$0();
+    $.pathRenderer = t2;
     t1.push(t2);
   },
   $is_args1: true
+},
+
+main_closure0: {"": "Closure;removeRenderer_7",
+  call$0: function() {
+    return this.removeRenderer_7.call$1($.pathRenderer);
+  }
 },
 
 resize_closure: {"": "Closure;",
@@ -7764,7 +7819,6 @@ PathRenderer: {"": "Renderer;path,levelRenderer,fieldCanvas,numberCanvas,canvase
     H.IterableMixinWorkaround_forEach(t1, new Y.PathRenderer_closure($parent));
     this.canvases = t1;
   },
-  $isPathRenderer: true,
   static: {
 PathRenderer$: function($parent, levelRenderer, path) {
   var t1 = new Y.PathRenderer(path, levelRenderer, null, null, null, true);
@@ -7871,26 +7925,15 @@ PathRenderer_remove_closure: {"": "Closure;",
 ["search", "models/search.dart", , B, {
 Search: {"": "Object;",
   findPath$0: function() {
-    var t1, t2, t3, center, $arguments, t4, neighbours;
-    t1 = this.path;
-    t2 = this.level;
-    while (true) {
-      t3 = this.frontier;
-      if (!(!t3.get$isEmpty(t3) && !this.goalReached))
-        break;
-      center = null;
+    var t1, t2, t3, unreachable, center, $arguments, t4, neighbours;
+    for (t1 = this.path, t2 = this.level; t3 = this.frontier, !t3.get$isEmpty(t3);) {
       do {
         t3 = this.frontier;
-        t3 = t3._head === t3._tail;
-        this.unreachable = t3;
-        if (t3)
-          break;
+        unreachable = t3._head === t3._tail;
         center = this.retrieveFrontier$0();
-      } while (C.JSArray_methods.contains$1(t1, center));
-      t3 = J.get$type$x(center) === C.FieldType_3 || this.unreachable;
-      this.goalReached = t3;
-      if (t3)
-        return this.goalReached && !this.unreachable;
+      } while (C.JSArray_methods.contains$1(t1, center) && !unreachable);
+      if (unreachable)
+        return;
       t1.push(center);
       t3 = t2.adjacentFields$1(center);
       $arguments = H.substitute(t3.$asIterableBase, H.getRuntimeTypeInfo(t3));
@@ -7901,6 +7944,8 @@ Search: {"": "Object;",
       t3 = new H.WhereIterable(neighbours, new B.Search_findPath_closure(this));
       t3.$builtinTypeInfo = [null];
       t4.addAll$1(t4, t3);
+      if (J.get$type$x(center) === C.FieldType_3)
+        return true;
     }
   },
   Search$1: function(level) {
@@ -7916,53 +7961,73 @@ Search_findPath_closure: {"": "Closure;this_0",
   $is_args1: true
 },
 
-BreadthFirst: {"": "Search;goalReached,unreachable,level,frontier,path",
+BreadthFirst: {"": "Search;level,frontier,path",
   retrieveFrontier$0: function() {
     return this.frontier.removeFirst$0();
   }
 },
 
-DepthFirst: {"": "Search;goalReached,unreachable,level,frontier,path",
+DepthFirst: {"": "Search;level,frontier,path",
   retrieveFrontier$0: function() {
     var t1 = this.frontier;
     return t1.removeLast$0(t1);
   }
 },
 
-AStar: {"": "Search;fValues,goalReached,unreachable,level,frontier,path",
+AStar: {"": "Search;fValues,level,frontier,path",
   retrieveFrontier$0: function() {
-    var t1 = this.frontier;
-    return t1.reduce$1(t1, new B.AStar_retrieveFrontier_closure(this));
+    var t1, t2;
+    t1 = {};
+    t1.minF_0 = null;
+    t1.i_1 = 0;
+    t2 = this.frontier;
+    t2.forEach$1(t2, new B.AStar_retrieveFrontier_closure(t1, new B.AStar_retrieveFrontier_calcFValue(this)));
+    t2 = this.frontier;
+    t2.remove$1(t2, t1.minF_0);
+    return t1.minF_0;
   }
 },
 
-AStar_retrieveFrontier_closure: {"": "Closure;this_0",
-  call$2: function(closest, next) {
-    var t1 = new B.AStar_retrieveFrontier__calcFValue(this.this_0);
-    return closest != null && J.$lt$n(t1.call$1(closest), t1.call$1(next)) ? closest : next;
-  },
-  $is_args2: true
-},
-
-AStar_retrieveFrontier__calcFValue: {"": "Closure;this_1",
-  call$1: function(field) {
-    var t1, t2, fValue, t3;
+AStar_retrieveFrontier_calcFValue: {"": "Closure;this_1",
+  call$2: function(field, index) {
+    var t1, t2, fValue;
+    if (index == null) {
+      t1 = this.this_1.path;
+      index = H.Arrays_indexOf(t1, field, 0, t1.length);
+    }
     t1 = this.this_1;
     t2 = t1.fValues;
     fValue = t2.$index(t2, field);
     if (fValue == null) {
-      t3 = t1.path;
-      t3 = H.Arrays_indexOf(t3, field, 0, t3.length);
       t1 = t1.level.goal.get$pos();
       t1 = t1.$sub(t1, field.get$pos());
-      t1 = t1.get$length(t1);
-      if (typeof t1 !== "number")
-        throw H.iae(t1);
-      t1 = t3 + t1;
+      t1 = J.$add$ns(index, t1.get$length(t1));
       t2.$indexSet(t2, field, t1);
     } else
       t1 = fValue;
     return t1;
+  },
+  call$1: function(field) {
+    return this.call$2(field, null);
+  },
+  $is_args2: true,
+  $is_args1: true
+},
+
+AStar_retrieveFrontier_closure: {"": "Closure;box_0,calcFValue_2",
+  call$1: function(f) {
+    var t1, t2, t3;
+    t1 = this.box_0;
+    t2 = t1.minF_0;
+    if (t2 != null) {
+      t3 = this.calcFValue_2;
+      t3 = J.$gt$n(t3.call$1(t2), t3.call$2(f, t1.i_1));
+      t2 = t3;
+    } else
+      t2 = true;
+    if (t2)
+      t1.minF_0 = f;
+    t1.i_1 = t1.i_1 + 1;
   },
   $is_args1: true
 }}],
@@ -7978,10 +8043,12 @@ Vector: {"": "Object;x>,y>,_vector$_length",
   $gt: function(_, v) {
     var t1, t2;
     t1 = this.get$length(this);
-    t2 = C.JSInt_methods.get$length(v);
+    t2 = J.get$length$asx(v);
     if (typeof t1 !== "number")
       throw t1.$gt();
-    return C.JSDouble_methods.$gt(t1, t2);
+    if (typeof t2 !== "number")
+      throw H.iae(t2);
+    return t1 > t2;
   },
   $lt: function(_, v) {
     var t1, t2;
@@ -7989,9 +8056,7 @@ Vector: {"": "Object;x>,y>,_vector$_length",
     t2 = J.get$length$asx(v);
     if (typeof t1 !== "number")
       throw t1.$lt();
-    if (typeof t2 !== "number")
-      throw H.iae(t2);
-    return t1 < t2;
+    return C.JSDouble_methods.$lt(t1, t2);
   },
   $add: function(_, v) {
     var t1 = J.getInterceptor$x(v);
@@ -8238,6 +8303,7 @@ $.Device__isOpera = null;
 $.Device__isWebKit = null;
 $.level = null;
 $.levelRenderer = null;
+$.pathRenderer = null;
 $.menuSize = 0;
 J.$add$ns = function(receiver, a0) {
   if (typeof receiver == "number" && typeof a0 == "number")

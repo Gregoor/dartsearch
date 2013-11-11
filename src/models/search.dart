@@ -6,9 +6,6 @@ import 'dart:collection';
 
 abstract class Search {
 
-	bool goalReached = false;
-	bool unreachable = false;
-	
 	Level level;
 	
 	Queue<Field> frontier;
@@ -21,19 +18,22 @@ abstract class Search {
 	}
 	
 	bool findPath() {
-		while (frontier.isNotEmpty && !goalReached) {
+		bool unreachable = false;
+		while (frontier.isNotEmpty) {
 			Field center;
 			do {
-				if (unreachable = frontier.isEmpty) break;
+				unreachable = frontier.isEmpty;
 				center = retrieveFrontier();
-			} while(path.contains(center));
+			} while(path.contains(center) && !unreachable);
 			
-			if (goalReached = center.type == FieldType.GOAL || unreachable) return goalReached && !unreachable;
+			if (unreachable) return null;
 			
 			path.add(center);
 			List neighbours = level.adjacentFields(center).toList();
 			neighbours.shuffle();
 			frontier.addAll(neighbours.where((f) => f.type != FieldType.WALL && !path.contains(f)));
+			
+			if (center.type == FieldType.GOAL) return true;
 		}
 	}
 	
@@ -62,15 +62,26 @@ class AStar extends Search {
 	HashMap<Field, num> fValues = {};
 
 	AStar(Level level) : super(level);
-
-  Field retrieveFrontier() => frontier.reduce((closest, next) {
-		calcFValue(Field field) {
+	
+	Field retrieveFrontier() {
+		calcFValue(Field field, [int index]) {
+			if (index == null) index = path.indexOf(field);
 			var fValue = fValues[field];
 			return fValue == null ?
-				fValues[field] = path.indexOf(field) + (level.goal.pos - field.pos).length :
+				fValues[field] = index + (level.goal.pos - field.pos).length :
 				fValue;   
 		}
-		return closest != null && calcFValue(closest) < calcFValue(next) ? closest : next;
-  });
+
+		Field minF;
+		int i = 0;
+		frontier.forEach((Field f) {
+			if (minF == null || calcFValue(minF) > calcFValue(f, i)) minF = f;
+			i++;
+		});
+		
+		frontier.remove(minF);
+		return minF;
+	}
+
 	
 }
