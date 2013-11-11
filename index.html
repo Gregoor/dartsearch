@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style type="text/css">
+      .hidden { opacity: 0; }
+      .animated { transition: opacity .5s; }
+    </style>
+    <script type="application/dart" src="src/main.dart"></script>
+    <script type="text/javascript" src="dart.js"></script>
+</head>
+<body>
+    <div id="searchContainer">
+    
+      <div class="topBar">
+       <input type="text" placeholder="Width" size="5" class="width">
+       <input type="text" placeholder="Height" size="5" class="height">
+       <button class="randomLevel">Random</button>
+       <input type="file" class="uploadLevel">
+      </div>
+      
+      <div class="searchBar hidden animated">
+        Search:
+        <button class="clear">Clear</button>
+        <button data-search="bfs">BFS</button>
+        <button data-search="dfs">DFS</button>
+        <button data-search="astar">A*</button>
+      </div>
+      
+      <div class="canvasContainer"></div>
+      
+    </div>
+</body>
+</html>
